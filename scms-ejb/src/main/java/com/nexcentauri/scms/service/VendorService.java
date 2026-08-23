@@ -22,7 +22,8 @@ public class VendorService {
     @Resource
     private SessionContext sessionContext;
 
-    @RolesAllowed({"LOGISTICS_MANAGER","ADMIN"})
+//    @RolesAllowed({"LOGISTICS_MANAGER","ADMIN"})
+    @PermitAll
     public void addVendor(Vendor vendor){
         if(sessionContext.isCallerInRole("ADMIN")){
             vendor.setPerformanceScore(100.0);
