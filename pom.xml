@@ -9,9 +9,9 @@
     <version>1.0</version>
     <packaging>pom</packaging>
     <modules>
-        <module>Scms-ejb</module>
-        <module>Scms-web</module>
-        <module>Scms-ear</module>
+        <module>scms-ejb</module>
+        <module>scms-web</module>
+        <module>scms-ear</module>
     </modules>
 
     <properties>
