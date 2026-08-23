@@ -4,13 +4,13 @@ import com.nexcentauri.scms.entity.Vendor;
 import com.nexcentauri.scms.exception.VendorNotFoundException;
 import com.nexcentauri.scms.service.VendorService;
 import jakarta.ejb.EJB;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-import java.awt.*;
-
 @Path("/vendors")
+@RequestScoped
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class VendorController {
