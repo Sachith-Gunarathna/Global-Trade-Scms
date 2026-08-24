@@ -4,13 +4,13 @@ import com.nexcentauri.scms.entity.Vendor;
 import com.nexcentauri.scms.exception.VendorNotFoundException;
 import com.nexcentauri.scms.service.VendorService;
 import jakarta.ejb.EJB;
-import jakarta.enterprise.context.RequestScoped;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import java.util.List;
+
 @Path("/vendors")
-@RequestScoped
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class VendorController {
@@ -18,21 +18,35 @@ public class VendorController {
     @EJB
     private VendorService vendorService;
 
-    @POST
-    public Response createVendor(Vendor vendor){
-        vendorService.addVendor(vendor);
-        return Response.status(Response.Status.CREATED).entity(vendor).build();
+    @GET
+    public Response getAllVendors(){
+        try {
+            List<Vendor> vendors = vendorService.getAllVendors();
+            return Response.ok(vendors).build();
+
+        }catch (Exception e){
+            return Response.serverError().entity("Error: "+ e.getMessage()).build();
+        }
     }
 
-    @GET
-    @Path("/{id}")
-    public Response getVendorById(@PathParam("id") Long id){
+    @POST
+    public Response createVendor(Vendor vendor){
         try {
-            Vendor vendor = vendorService.getVendor(id);
-            return Response.ok(vendor).build();
-        }catch (VendorNotFoundException e){
-            String errorMessage = "{\"error\": \""+e.getMessage()+"\"}";
-            return Response.status(Response.Status.NOT_FOUND).entity(errorMessage).build();
+            Vendor created = vendorService.createVendor(vendor);
+            return Response.status(Response.Status.CREATED).entity(created).build();
+        }catch (Exception e){
+            return Response.serverError().entity("Error: " + e.getMessage()).build();
+        }
+    }
+
+    @PUT
+    @Path("/{id}/score")
+    public Response updateVendorScore(@PathParam("id") Long id, @QueryParam("score") Double score){
+        try {
+            Vendor update = vendorService.updateVendorScore(id,score);
+            return Response.ok(update).build();
+        }catch (Exception e){
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         }
     }
 
