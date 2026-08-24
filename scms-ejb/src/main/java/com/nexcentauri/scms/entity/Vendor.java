@@ -3,6 +3,7 @@ package com.nexcentauri.scms.entity;
 import jakarta.persistence.*;
 
 import java.io.Serializable;
+import java.util.List;
 
 @Entity
 @Table(name = "vendors")
@@ -21,6 +22,9 @@ public class Vendor implements Serializable {
     @Column(name = "performance_score")
     private Double performanceScore;
 
+    @OneToMany(mappedBy = "vendor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Shipment> shipments;
+
     public Vendor(){}
 
     public Long getId() {return id;}
@@ -31,5 +35,7 @@ public class Vendor implements Serializable {
     public void setEmail(String email) {this.email = email;}
     public Double getPerformanceScore() {return performanceScore;}
     public void setPerformanceScore(Double performanceScore) {this.performanceScore = performanceScore;}
+    public List<Shipment> getShipments() {return shipments;}
+    public void setShipments(List<Shipment> shipments) {this.shipments = shipments;}
 
 }
