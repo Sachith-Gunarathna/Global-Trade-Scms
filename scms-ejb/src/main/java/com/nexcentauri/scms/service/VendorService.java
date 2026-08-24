@@ -2,43 +2,51 @@ package com.nexcentauri.scms.service;
 
 import com.nexcentauri.scms.entity.Vendor;
 import com.nexcentauri.scms.exception.VendorNotFoundException;
-import com.nexcentauri.scms.interceptor.LogisticsAuditInterceptor;
 import jakarta.annotation.Resource;
-import jakarta.annotation.security.PermitAll;
-import jakarta.annotation.security.RolesAllowed;
-import jakarta.ejb.SessionContext;
-import jakarta.ejb.Stateless;
-import jakarta.interceptor.Interceptors;
+import jakarta.ejb.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.UserTransaction;
+
+import java.util.List;
 
 @Stateless
-@Interceptors(LogisticsAuditInterceptor.class)
+@TransactionManagement(TransactionManagementType.BEAN)
 public class VendorService {
+
+    private static final String FIND_ALL_VENDORS_QUERY = "SELECT v FROM Vendor v";
 
     @PersistenceContext(unitName = "GlobalTradePU")
     private EntityManager entityManager;
 
-    @Resource
-    private SessionContext sessionContext;
+    @TransactionAttribute(TransactionAttributeType.REQUIRED)
+    public Vendor createVendor(Vendor vendor) throws Exception{
 
-//    @RolesAllowed({"LOGISTICS_MANAGER","ADMIN"})
-    @PermitAll
-    public void addVendor(Vendor vendor){
-        if(sessionContext.isCallerInRole("ADMIN")){
-            vendor.setPerformanceScore(100.0);
-        }
-        entityManager.persist(vendor);
+            entityManager.persist(vendor);
+            return vendor;
+
     }
 
-    @PermitAll
-    public Vendor getVendor(Long id) throws VendorNotFoundException {
+    @TransactionAttribute(TransactionAttributeType.REQUIRED)
+    public Vendor updateVendorScore(Long vendorId, Double newPerformanceScore) throws VendorNotFoundException{
 
-        Vendor vendor = entityManager.find(Vendor.class, id);
+            Vendor vendor = findVendorOrThrow(vendorId);
+            vendor.setPerformanceScore(newPerformanceScore);
+            return vendor;
+
+    }
+
+    public List<Vendor> getAllVendors() throws Exception{
+       return entityManager.createQuery(FIND_ALL_VENDORS_QUERY, Vendor.class).getResultList();
+    }
+
+    private Vendor findVendorOrThrow(Long vendorId) throws VendorNotFoundException{
+        Vendor vendor = entityManager.find(Vendor.class, vendorId);
 
         if(vendor == null){
-            throw new VendorNotFoundException("Vendor with ID "+ id +" does not exist in the logistics database.");
+            throw new VendorNotFoundException("Vendor with Id" + vendorId + " not found.");
         }
+
         return vendor;
     }
 
