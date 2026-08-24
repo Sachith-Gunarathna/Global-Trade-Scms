@@ -26,6 +26,9 @@ public class LogisticsTimerService {
     public void performanceDailySupplyChainChecks(){
         LOGGER.info("--- Executing daily supply chain checks...  ---");
 
+        checkDelayedShipments();
+        checkInventoryLevels();
+        checkCustomsDeadlines();
     }
 
     @Schedule(hour = "*", minute = "*", second = "0", persistent = false)
