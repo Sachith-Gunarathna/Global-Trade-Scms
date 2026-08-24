@@ -2,11 +2,9 @@ package com.nexcentauri.scms.service;
 
 import com.nexcentauri.scms.entity.Vendor;
 import com.nexcentauri.scms.exception.VendorNotFoundException;
-import jakarta.annotation.Resource;
 import jakarta.ejb.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import jakarta.transaction.UserTransaction;
 
 import java.util.List;
 

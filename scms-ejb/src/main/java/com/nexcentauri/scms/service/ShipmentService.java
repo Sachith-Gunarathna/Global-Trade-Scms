@@ -1,7 +1,9 @@
 package com.nexcentauri.scms.service;
 
 import com.nexcentauri.scms.entity.Shipment;
+import com.nexcentauri.scms.interceptor.LogisticsAuditInterceptor;
 import jakarta.ejb.*;
+import jakarta.interceptor.Interceptors;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
@@ -9,6 +11,7 @@ import java.util.List;
 
 @Stateless
 @TransactionManagement(TransactionManagementType.CONTAINER)
+@Interceptors(LogisticsAuditInterceptor.class)
 public class ShipmentService {
 
     @PersistenceContext(unitName = "GlobalTradePU")
