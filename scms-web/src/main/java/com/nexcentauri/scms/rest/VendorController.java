@@ -1,7 +1,6 @@
 package com.nexcentauri.scms.rest;
 
 import com.nexcentauri.scms.entity.Vendor;
-import com.nexcentauri.scms.exception.VendorNotFoundException;
 import com.nexcentauri.scms.service.VendorService;
 import jakarta.ejb.EJB;
 import jakarta.ws.rs.*;
