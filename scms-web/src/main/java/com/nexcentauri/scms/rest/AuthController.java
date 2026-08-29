@@ -40,11 +40,17 @@ public class AuthController {
                     request.getPassword()
             );
 
-            JsonObject jsonResponse = Json.createObjectBuilder()
-                    .add("success", true)
-                    .add("email", user.getEmail())
-                    .add("role", user.getRole())
-                    .build();
+            String fName = user.getFirstName() != null ? user.getFirstName() : "";
+            String lName = user.getLastName() != null ? user.getLastName() : "";
+            String phone = user.getMobileNumber() != null ? user.getMobileNumber() : "";
+            String dept = user.getDepartment() != null ? user.getDepartment() : "";
+            String hub = user.getPrimaryHub() != null ? user.getPrimaryHub() : "";
+
+            String jsonResponse = String.format(
+                    "{\"success\": true, \"email\": \"%s\", \"role\": \"%s\", \"firstName\": \"%s\"," +
+                            " \"lastName\": \"%s\", \"phone\": \"%s\", \"department\": \"%s\", \"hub\": \"%s\"}",
+                    user.getEmail(), user.getRole(), fName, lName, phone, dept, hub
+            );
 
             return Response.ok(jsonResponse).build();
 
