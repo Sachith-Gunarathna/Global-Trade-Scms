@@ -45,7 +45,7 @@
                         <webModule>
                             <groupId>com.nexcentauri</groupId>
                             <artifactId>scms-web</artifactId>
-                            <contextRoot>/api</contextRoot>
+                            <contextRoot>/Global-Trade-Scms</contextRoot>
                         </webModule>
                     </modules>
                 </configuration>
