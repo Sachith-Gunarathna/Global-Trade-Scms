@@ -3,12 +3,12 @@ package com.nexcentauri.scms.rest;
 import com.nexcentauri.scms.entity.SystemUser;
 import com.nexcentauri.scms.rest.dto.LoginRequest;
 import com.nexcentauri.scms.rest.dto.RegisterRequest;
+import com.nexcentauri.scms.dto.UserProfileDTO;
 import com.nexcentauri.scms.service.AuthService;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -25,18 +25,42 @@ public class AuthController {
     public Response login(LoginRequest request){
 
         try {
-            SystemUser user = authService.authenticate(request.getEmail(), request.getPassword());
 
-            String jsonResponse = String.format(
-                    "{\"success\": true, \"email\": \"%s\",\"role\": \"%s\"}",
-                    user.getEmail(),
-                    user.getRole()
+            if (request == null) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(Json.createObjectBuilder()
+                                .add("success", false)
+                                .add("error", "Login request is required.")
+                                .build())
+                        .build();
+            }
+
+            SystemUser user = authService.authenticate(
+                    request.getEmail(),
+                    request.getPassword()
             );
 
+            JsonObject jsonResponse = Json.createObjectBuilder()
+                    .add("success", true)
+                    .add("email", user.getEmail())
+                    .add("role", user.getRole())
+                    .build();
+
             return Response.ok(jsonResponse).build();
-        }catch (Exception e){
-            String errorJson = String.format("{\"success\": false, \"error\": \"%s\"}", e.getMessage());
-            return Response.status(Response.Status.BAD_REQUEST).entity(errorJson).build();
+
+        } catch (Exception e) {
+
+            JsonObject errorJson = Json.createObjectBuilder()
+                    .add("success", false)
+                    .add("error",
+                            e.getMessage() != null
+                                    ? e.getMessage()
+                                    : "Authentication failed.")
+                    .build();
+
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity(errorJson)
+                    .build();
         }
 
     }
@@ -45,6 +69,7 @@ public class AuthController {
     @Path("/register")
     public Response register(RegisterRequest request){
         try {
+
             authService.registerUser(
                     request.getFirstName(),
                     request.getLastName(),
@@ -56,10 +81,40 @@ public class AuthController {
                     request.getRole(),
                     request.getPassword()
             );
-            return Response.ok("{\"success\": true, \"message\": \"Registration Successful\"}").build();
-        }catch (Exception e){
-            String errorJson = String.format("{\"success\": false, \"error\": \"%s\"}", e.getMessage());
-            return Response.status(Response.Status.BAD_REQUEST).entity(errorJson).build();
+
+            JsonObject response = Json.createObjectBuilder()
+                    .add("success", true)
+                    .add("message", "Registration successful.")
+                    .build();
+
+            return Response.ok(response).build();
+
+        } catch (Exception e) {
+
+            JsonObject error = Json.createObjectBuilder()
+                    .add("success", false)
+                    .add("error",
+                            e.getMessage() != null
+                                    ? e.getMessage()
+                                    : "Registration failed.")
+                    .build();
+
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(error)
+                    .build();
+        }
+    }
+
+    @PUT
+    @Path("/profile")
+    public Response updateProfile(UserProfileDTO request) {
+        try {
+            authService.updateUserProfile(request);
+            return Response.ok("{\"success\": true, \"message\": \"Profile Updated\"}").build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"success\": false, \"error\": \"" + e.getMessage() + "\"}")
+                    .build();
         }
     }
 
