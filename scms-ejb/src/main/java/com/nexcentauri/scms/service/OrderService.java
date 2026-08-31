@@ -34,6 +34,13 @@ public class OrderService {
         return entityManager.createQuery("SELECT o FROM TradeOrder o LEFT JOIN FETCH o.vendor ORDER BY o.createdAt DESC", TradeOrder.class).getResultList();
     }
 
+    @TransactionAttribute(TransactionAttributeType.SUPPORTS)
+    public List<TradeOrder> getAllForVendor(Long vendorId) {
+        return entityManager.createQuery("SELECT o FROM TradeOrder o JOIN FETCH o.vendor WHERE o.vendor.id = :vendorId ORDER BY o.createdAt DESC", TradeOrder.class)
+                .setParameter("vendorId", vendorId)
+                .getResultList();
+    }
+
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public TradeOrder create(TradeOrder order, Long vendorId) throws SupplyChainApplicationException {
         validate(order);

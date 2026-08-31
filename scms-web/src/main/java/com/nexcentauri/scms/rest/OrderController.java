@@ -1,6 +1,8 @@
 package com.nexcentauri.scms.rest;
 
+import com.nexcentauri.scms.entity.SystemUser;
 import com.nexcentauri.scms.entity.TradeOrder;
+import com.nexcentauri.scms.entity.Vendor;
 import com.nexcentauri.scms.exception.SupplyChainApplicationException;
 import com.nexcentauri.scms.rest.dto.OrderRequest;
 import com.nexcentauri.scms.security.AccessGuard;
@@ -18,6 +20,7 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
+import java.util.Map;
 
 @Path("/orders")
 @Produces(MediaType.APPLICATION_JSON)
@@ -30,8 +33,12 @@ public class OrderController {
     private AccessGuard accessGuard;
 
     @GET
-    public List<java.util.Map<String, Object>> all() {
-        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "VENDOR_REP");
+    public List<Map<String, Object>> all() {
+        SystemUser user = accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "VENDOR_REP");
+        if (accessGuard.isVendorRepresentative(user)) {
+            Vendor vendor = accessGuard.requireRepresentativeVendor(user);
+            return orderService.getAllForVendor(vendor.getId()).stream().map(ApiMapper::order).toList();
+        }
         return orderService.getAll().stream().map(ApiMapper::order).toList();
     }
 

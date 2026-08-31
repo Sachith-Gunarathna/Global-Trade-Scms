@@ -5,6 +5,8 @@ import com.nexcentauri.scms.entity.Inventory;
 import com.nexcentauri.scms.entity.Shipment;
 import jakarta.annotation.PostConstruct;
 import jakarta.ejb.EJB;
+import jakarta.ejb.Lock;
+import jakarta.ejb.LockType;
 import jakarta.ejb.Schedule;
 import jakarta.ejb.Singleton;
 import jakarta.ejb.Startup;
@@ -22,6 +24,7 @@ import java.util.Map;
 
 @Singleton
 @Startup
+@Lock(LockType.READ)
 public class LogisticsTimerService {
     private static final String CUSTOMS_TIMER = "CUSTOMS_DEADLINE_TIMER";
     @Resource
@@ -40,8 +43,11 @@ public class LogisticsTimerService {
     private AlertService alertService;
     @EJB
     private PerformanceService performanceService;
+    @EJB
+    private CarrierGateway carrierGateway;
 
     @PostConstruct
+    @Lock(LockType.WRITE)
     public void initializeProgrammaticTimer() {
         boolean exists = timerService.getTimers().stream().anyMatch(timer -> CUSTOMS_TIMER.equals(String.valueOf(timer.getInfo())));
         if (!exists) {
@@ -55,7 +61,8 @@ public class LogisticsTimerService {
         long started = System.nanoTime();
         boolean success = false;
         try {
-            int delayed = shipmentService.markOverdueShipmentsDelayed(LocalDateTime.now());
+            carrierGateway.synchronizeActiveShipments();
+            shipmentService.markOverdueShipmentsDelayed(LocalDateTime.now());
             for (Shipment shipment : shipmentService.getAllForAutomation()) {
                 if ("DELAYED".equals(shipment.getStatus())) {
                     alertService.raise("danger", "SHIPMENT", shipment.getTrackingNumber(), "Shipment " + shipment.getTrackingNumber() + " is delayed", shipment.getOrigin() + " to " + shipment.getDestination() + " requires attention.");

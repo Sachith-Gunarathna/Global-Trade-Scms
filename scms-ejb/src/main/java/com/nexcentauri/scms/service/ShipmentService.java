@@ -40,6 +40,24 @@ public class ShipmentService {
     }
 
     @TransactionAttribute(TransactionAttributeType.SUPPORTS)
+    public List<Shipment> getAllForVendor(Long vendorId) {
+        return entityManager.createQuery("SELECT s FROM Shipment s JOIN FETCH s.vendor WHERE s.vendor.id = :vendorId ORDER BY s.createdAt DESC", Shipment.class)
+                .setParameter("vendorId", vendorId)
+                .getResultList();
+    }
+
+    @TransactionAttribute(TransactionAttributeType.SUPPORTS)
+    public Shipment getForVendor(Long id, Long vendorId) throws ShipmentNotFoundException {
+        List<Shipment> values = entityManager.createQuery("SELECT s FROM Shipment s JOIN FETCH s.vendor WHERE s.id = :id AND s.vendor.id = :vendorId", Shipment.class)
+                .setParameter("id", id)
+                .setParameter("vendorId", vendorId)
+                .setMaxResults(1)
+                .getResultList();
+        if (values.isEmpty()) throw new ShipmentNotFoundException("Shipment was not found for this vendor account.");
+        return values.get(0);
+    }
+
+    @TransactionAttribute(TransactionAttributeType.SUPPORTS)
     public Shipment get(Long id) throws ShipmentNotFoundException {
         return require(id);
     }

@@ -1,6 +1,8 @@
 package com.nexcentauri.scms.rest;
 
 import com.nexcentauri.scms.entity.Shipment;
+import com.nexcentauri.scms.entity.SystemUser;
+import com.nexcentauri.scms.entity.Vendor;
 import com.nexcentauri.scms.exception.SupplyChainApplicationException;
 import com.nexcentauri.scms.rest.dto.ShipmentRequest;
 import com.nexcentauri.scms.security.AccessGuard;
@@ -19,6 +21,7 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
+import java.util.Map;
 
 @Path("/shipments")
 @Produces(MediaType.APPLICATION_JSON)
@@ -31,15 +34,23 @@ public class ShipmentController {
     private AccessGuard accessGuard;
 
     @GET
-    public List<java.util.Map<String, Object>> all() {
-        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP");
+    public List<Map<String, Object>> all() {
+        SystemUser user = accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP");
+        if (accessGuard.isVendorRepresentative(user)) {
+            Vendor vendor = accessGuard.requireRepresentativeVendor(user);
+            return shipmentService.getAllForVendor(vendor.getId()).stream().map(ApiMapper::shipment).toList();
+        }
         return shipmentService.getAll().stream().map(ApiMapper::shipment).toList();
     }
 
     @GET
     @Path("/{id}")
-    public java.util.Map<String, Object> one(@PathParam("id") Long id) throws SupplyChainApplicationException {
-        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP");
+    public Map<String, Object> one(@PathParam("id") Long id) throws SupplyChainApplicationException {
+        SystemUser user = accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP");
+        if (accessGuard.isVendorRepresentative(user)) {
+            Vendor vendor = accessGuard.requireRepresentativeVendor(user);
+            return ApiMapper.shipment(shipmentService.getForVendor(id, vendor.getId()));
+        }
         return ApiMapper.shipment(shipmentService.get(id));
     }
 

@@ -1,5 +1,6 @@
 package com.nexcentauri.scms.rest;
 
+import com.nexcentauri.scms.entity.SystemUser;
 import com.nexcentauri.scms.entity.Vendor;
 import com.nexcentauri.scms.exception.SupplyChainApplicationException;
 import com.nexcentauri.scms.rest.dto.VendorRequest;
@@ -19,6 +20,7 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
+import java.util.Map;
 
 @Path("/vendors")
 @Produces(MediaType.APPLICATION_JSON)
@@ -31,8 +33,9 @@ public class VendorController {
     private AccessGuard accessGuard;
 
     @GET
-    public List<java.util.Map<String, Object>> all() {
-        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP");
+    public List<Map<String, Object>> all() {
+        SystemUser user = accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP");
+        if (accessGuard.isVendorRepresentative(user)) return List.of(ApiMapper.vendor(accessGuard.requireRepresentativeVendor(user)));
         return vendorService.getAll().stream().map(ApiMapper::vendor).toList();
     }
 

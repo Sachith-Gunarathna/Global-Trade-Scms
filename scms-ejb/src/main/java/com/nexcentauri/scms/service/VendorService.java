@@ -1,5 +1,6 @@
 package com.nexcentauri.scms.service;
 
+import com.nexcentauri.scms.entity.SystemUser;
 import com.nexcentauri.scms.entity.Vendor;
 import com.nexcentauri.scms.exception.SupplyChainApplicationException;
 import com.nexcentauri.scms.exception.VendorNotFoundException;
@@ -11,6 +12,7 @@ import jakarta.ejb.Stateless;
 import jakarta.ejb.TransactionAttribute;
 import jakarta.ejb.TransactionAttributeType;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,11 +30,35 @@ public class VendorService {
         return entityManager.createQuery("SELECT v FROM Vendor v ORDER BY v.name", Vendor.class).getResultList();
     }
 
+    @TransactionAttribute(TransactionAttributeType.SUPPORTS)
+    public Vendor findRepresentativeVendor(SystemUser user) {
+        if (user == null) return null;
+        String organization = clean(user.getOrganizationOrCompany());
+        if (organization != null) {
+            List<Vendor> byOrganization = entityManager.createQuery(
+                    "SELECT v FROM Vendor v WHERE LOWER(v.name) = LOWER(:value) OR LOWER(v.code) = LOWER(:value)", Vendor.class)
+                    .setParameter("value", organization)
+                    .setMaxResults(1)
+                    .getResultList();
+            if (!byOrganization.isEmpty()) return byOrganization.get(0);
+        }
+        String email = clean(user.getEmail());
+        if (email != null) {
+            List<Vendor> byEmail = entityManager.createQuery("SELECT v FROM Vendor v WHERE LOWER(v.email) = LOWER(:email)", Vendor.class)
+                    .setParameter("email", email)
+                    .setMaxResults(1)
+                    .getResultList();
+            if (!byEmail.isEmpty()) return byEmail.get(0);
+        }
+        return null;
+    }
+
     @VendorValidated
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public Vendor create(Vendor vendor) throws SupplyChainApplicationException {
         if (vendor == null) throw new SupplyChainApplicationException("Vendor details are required.");
         if (vendor.getCode() == null || vendor.getCode().isBlank()) vendor.setCode(nextCode());
+        if (findByCodeOrEmail(vendor.getCode(), vendor.getEmail()) != null) throw new SupplyChainApplicationException("Vendor code or email already exists.");
         if (vendor.getRating() == null) vendor.setRating(4.0);
         if (vendor.getPerformanceScore() == null) vendor.setPerformanceScore(vendor.getRating() * 20.0);
         if (vendor.getOnTimeRate() == null) vendor.setOnTimeRate(90.0);
@@ -90,6 +116,18 @@ public class VendorService {
         }
     }
 
+    private Vendor findByCodeOrEmail(String code, String email) {
+        try {
+            return entityManager.createQuery("SELECT v FROM Vendor v WHERE LOWER(v.code) = LOWER(:code) OR LOWER(v.email) = LOWER(:email)", Vendor.class)
+                    .setParameter("code", code == null ? "" : code.trim())
+                    .setParameter("email", email == null ? "" : email.trim())
+                    .setMaxResults(1)
+                    .getSingleResult();
+        } catch (NoResultException exception) {
+            return null;
+        }
+    }
+
     private String nextCode() {
         Long count = entityManager.createQuery("SELECT COUNT(v) FROM Vendor v", Long.class).getSingleResult();
         return String.format("SUP-%03d", count + 1);
@@ -97,5 +135,9 @@ public class VendorService {
 
     private String normalizeStatus(String status) {
         return status == null ? "" : status.trim().toUpperCase().replace(' ', '_');
+    }
+
+    private String clean(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

@@ -33,11 +33,11 @@ public class DataBootstrapService {
 
     private void seedUsers() {
         String password = System.getenv().getOrDefault("SCMS_BOOTSTRAP_PASSWORD", "Scms@1234");
-        authService.createBootstrapUser("Alex", "Grant", "admin@globaltrade.lk", "ADMIN", password);
-        authService.createBootstrapUser("Nimal", "Perera", "logistics@globaltrade.lk", "LOGISTICS_COORDINATOR", password);
-        authService.createBootstrapUser("Sanduni", "Fernando", "warehouse@globaltrade.lk", "WAREHOUSE_MANAGER", password);
-        authService.createBootstrapUser("Tharindu", "Silva", "customs@globaltrade.lk", "CUSTOMS_AGENT", password);
-        authService.createBootstrapUser("Kamal", "Jayawardena", "vendor@globaltrade.lk", "VENDOR_REP", password);
+        authService.createBootstrapUser("Alex", "Grant", "admin@globaltrade.lk", "ADMIN", "GlobalTrade Logistics Corporation", password);
+        authService.createBootstrapUser("Nimal", "Perera", "logistics@globaltrade.lk", "LOGISTICS_COORDINATOR", "GlobalTrade Logistics Corporation", password);
+        authService.createBootstrapUser("Sanduni", "Fernando", "warehouse@globaltrade.lk", "WAREHOUSE_MANAGER", "GlobalTrade Logistics Corporation", password);
+        authService.createBootstrapUser("Tharindu", "Silva", "customs@globaltrade.lk", "CUSTOMS_AGENT", "GlobalTrade Logistics Corporation", password);
+        authService.createBootstrapUser("Kamal", "Jayawardena", "vendor@globaltrade.lk", "VENDOR_REP", "Lanka Industrial Fabrications PLC", password);
     }
 
     private void seedOperationalData() {

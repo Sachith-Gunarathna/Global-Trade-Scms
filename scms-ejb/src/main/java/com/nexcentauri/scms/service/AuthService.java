@@ -93,15 +93,20 @@ public class AuthService {
     }
 
     @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
-    public SystemUser createBootstrapUser(String firstName, String lastName, String email, String role, String password) {
+    public SystemUser createBootstrapUser(String firstName, String lastName, String email, String role, String organization, String password) {
         SystemUser existing = findByEmail(email);
-        if (existing != null) return existing;
+        if (existing != null) {
+            existing.setRole(role);
+            existing.setOrganizationOrCompany(clean(organization));
+            existing.setUpdatedAt(LocalDateTime.now());
+            return existing;
+        }
         SystemUser user = new SystemUser();
         user.setFirstName(firstName);
         user.setLastName(lastName);
         user.setEmail(normalizeEmail(email));
         user.setMobileNumber("+94 11 000 0000");
-        user.setOrganizationOrCompany("GlobalTrade Logistics Corporation");
+        user.setOrganizationOrCompany(clean(organization));
         user.setPrimaryHub("Port of Colombo HQ");
         user.setDepartment(role.replace('_', ' '));
         user.setRole(role);
