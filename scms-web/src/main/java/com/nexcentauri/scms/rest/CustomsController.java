@@ -3,9 +3,11 @@ package com.nexcentauri.scms.rest;
 import com.nexcentauri.scms.entity.CustomsDocument;
 import com.nexcentauri.scms.exception.SupplyChainApplicationException;
 import com.nexcentauri.scms.rest.dto.CustomsRequest;
+import com.nexcentauri.scms.security.AccessGuard;
 import com.nexcentauri.scms.service.CustomsService;
 import com.nexcentauri.scms.service.CustomsTransactionService;
 import jakarta.ejb.EJB;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -24,16 +26,22 @@ import java.util.List;
 public class CustomsController {
     @EJB
     private CustomsService customsService;
+
     @EJB
     private CustomsTransactionService transactionService;
 
+    @Inject
+    private AccessGuard accessGuard;
+
     @GET
     public List<java.util.Map<String, Object>> all() {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "CUSTOMS_AGENT", "VENDOR_REP");
         return customsService.getAll().stream().map(ApiMapper::customs).toList();
     }
 
     @POST
     public Response create(CustomsRequest request) throws SupplyChainApplicationException {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "CUSTOMS_AGENT");
         if (request == null) throw new SupplyChainApplicationException("Customs document details are required.");
         CustomsDocument document = new CustomsDocument();
         document.setDocumentNumber(request.getDocumentNumber());
@@ -47,18 +55,21 @@ public class CustomsController {
     @PUT
     @Path("/{id}/approve")
     public Response approve(@PathParam("id") Long id, @QueryParam("notes") String notes) throws SupplyChainApplicationException {
+        accessGuard.requireAnyRole("ADMIN", "CUSTOMS_AGENT");
         return Response.ok(ApiMapper.customs(customsService.approve(id, notes))).build();
     }
 
     @PUT
     @Path("/{id}/reject")
     public Response reject(@PathParam("id") Long id, @QueryParam("notes") String notes) throws SupplyChainApplicationException {
+        accessGuard.requireAnyRole("ADMIN", "CUSTOMS_AGENT");
         return Response.ok(ApiMapper.customs(customsService.reject(id, notes))).build();
     }
 
     @POST
     @Path("/{id}/release")
     public Response release(@PathParam("id") Long id) throws SupplyChainApplicationException {
+        accessGuard.requireAnyRole("ADMIN", "CUSTOMS_AGENT");
         return Response.ok(ApiMapper.customs(transactionService.releaseShipment(id))).build();
     }
 }

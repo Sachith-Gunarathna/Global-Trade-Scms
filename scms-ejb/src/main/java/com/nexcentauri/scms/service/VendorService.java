@@ -7,7 +7,6 @@ import com.nexcentauri.scms.interceptor.binding.AuditTrail;
 import com.nexcentauri.scms.interceptor.binding.Monitored;
 import com.nexcentauri.scms.interceptor.binding.VendorValidated;
 import jakarta.annotation.security.DeclareRoles;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.ejb.Stateless;
 import jakarta.ejb.TransactionAttribute;
 import jakarta.ejb.TransactionAttributeType;
@@ -24,13 +23,11 @@ public class VendorService {
     @PersistenceContext(unitName = "GlobalTradePU")
     private EntityManager entityManager;
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP"})
     @TransactionAttribute(TransactionAttributeType.SUPPORTS)
     public List<Vendor> getAll() {
         return entityManager.createQuery("SELECT v FROM Vendor v ORDER BY v.name", Vendor.class).getResultList();
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER"})
     @VendorValidated
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public Vendor create(Vendor vendor) throws SupplyChainApplicationException {
@@ -46,7 +43,6 @@ public class VendorService {
         return vendor;
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR"})
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public Vendor updateScore(Long vendorId, double score) throws VendorNotFoundException, SupplyChainApplicationException {
         if (score < 0.0 || score > 100.0) throw new SupplyChainApplicationException("Performance score must be between 0 and 100.");
@@ -56,13 +52,13 @@ public class VendorService {
         return vendor;
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR"})
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public void delete(Long vendorId) throws VendorNotFoundException, SupplyChainApplicationException {
         Vendor vendor = require(vendorId);
         Long shipmentCount = entityManager.createQuery("SELECT COUNT(s) FROM Shipment s WHERE s.vendor.id = :id", Long.class).setParameter("id", vendorId).getSingleResult();
         Long inventoryCount = entityManager.createQuery("SELECT COUNT(i) FROM Inventory i WHERE i.vendor.id = :id", Long.class).setParameter("id", vendorId).getSingleResult();
-        if (shipmentCount > 0 || inventoryCount > 0) throw new SupplyChainApplicationException("Vendor cannot be deleted while shipments or inventory records are linked to it.");
+        Long orderCount = entityManager.createQuery("SELECT COUNT(o) FROM TradeOrder o WHERE o.vendor.id = :id", Long.class).setParameter("id", vendorId).getSingleResult();
+        if (shipmentCount > 0 || inventoryCount > 0 || orderCount > 0) throw new SupplyChainApplicationException("Vendor cannot be deleted while shipments, inventory items, or orders are linked to it.");
         entityManager.remove(vendor);
     }
 

@@ -7,7 +7,6 @@ import com.nexcentauri.scms.exception.SupplyChainApplicationException;
 import com.nexcentauri.scms.interceptor.binding.AuditTrail;
 import com.nexcentauri.scms.interceptor.binding.Monitored;
 import jakarta.annotation.security.DeclareRoles;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.ejb.TransactionAttribute;
@@ -28,7 +27,6 @@ public class InventoryService {
     @EJB
     private VendorService vendorService;
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "VENDOR_REP"})
     @TransactionAttribute(TransactionAttributeType.SUPPORTS)
     public List<Inventory> getAll() {
         return entityManager.createQuery("SELECT i FROM Inventory i LEFT JOIN FETCH i.vendor ORDER BY i.itemName", Inventory.class).getResultList();
@@ -39,7 +37,6 @@ public class InventoryService {
         return entityManager.createQuery("SELECT i FROM Inventory i LEFT JOIN FETCH i.vendor ORDER BY i.itemName", Inventory.class).getResultList();
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER"})
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public Inventory create(Inventory item, Long vendorId) throws SupplyChainApplicationException {
         validate(item);
@@ -53,7 +50,6 @@ public class InventoryService {
         return item;
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER"})
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public Inventory updateQuantity(Long id, int quantity) throws InventoryOperationException {
         if (quantity < 0) throw new InventoryOperationException("Inventory quantity cannot be negative.");
@@ -63,7 +59,6 @@ public class InventoryService {
         return item;
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER"})
     @TransactionAttribute(TransactionAttributeType.MANDATORY)
     public void reserveStock(Long id, int quantity) throws InventoryOperationException {
         if (quantity <= 0) throw new InventoryOperationException("Reservation quantity must be greater than zero.");
@@ -73,7 +68,6 @@ public class InventoryService {
         item.setUpdatedAt(LocalDateTime.now());
     }
 
-    @RolesAllowed({"ADMIN", "WAREHOUSE_MANAGER"})
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public void delete(Long id) throws InventoryOperationException {
         entityManager.remove(require(id));

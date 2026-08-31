@@ -1,18 +1,20 @@
 package com.nexcentauri.scms.rest;
 
+import com.nexcentauri.scms.entity.SystemUser;
 import com.nexcentauri.scms.exception.SupplyChainApplicationException;
+import com.nexcentauri.scms.security.AccessGuard;
 import com.nexcentauri.scms.service.UserPreferenceService;
 import jakarta.ejb.EJB;
-import jakarta.security.enterprise.SecurityContext;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.security.Principal;
 import java.util.Map;
 
 @Path("/users/{email}/preferences")
@@ -21,8 +23,9 @@ import java.util.Map;
 public class PreferenceController {
     @EJB
     private UserPreferenceService preferenceService;
-    @jakarta.inject.Inject
-    private SecurityContext securityContext;
+
+    @Inject
+    private AccessGuard accessGuard;
 
     @GET
     public Response get(@PathParam("email") String email) throws SupplyChainApplicationException {
@@ -36,11 +39,10 @@ public class PreferenceController {
         return Response.ok(Map.of("success", true, "preferences", preferenceService.updatePreferences(email, preferences))).build();
     }
 
-    private void authorize(String email) throws SupplyChainApplicationException {
-        Principal principal = securityContext.getCallerPrincipal();
-        if (principal == null) throw new SupplyChainApplicationException("Authentication is required.");
-        if (!principal.getName().equalsIgnoreCase(email) && !securityContext.isCallerInRole("ADMIN")) {
-            throw new SupplyChainApplicationException("You are not authorized to access these preferences.");
+    private void authorize(String email) {
+        SystemUser user = accessGuard.requireAuthenticated();
+        if (!user.getEmail().equalsIgnoreCase(email) && !"ADMIN".equals(user.getRole())) {
+            throw new ForbiddenException("You are not authorized to access these preferences.");
         }
     }
 }

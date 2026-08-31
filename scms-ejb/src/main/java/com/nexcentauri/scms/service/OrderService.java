@@ -7,7 +7,6 @@ import com.nexcentauri.scms.exception.SupplyChainApplicationException;
 import com.nexcentauri.scms.interceptor.binding.AuditTrail;
 import com.nexcentauri.scms.interceptor.binding.Monitored;
 import jakarta.annotation.security.DeclareRoles;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.ejb.TransactionAttribute;
@@ -30,13 +29,11 @@ public class OrderService {
     @EJB
     private VendorService vendorService;
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "VENDOR_REP"})
     @TransactionAttribute(TransactionAttributeType.SUPPORTS)
     public List<TradeOrder> getAll() {
         return entityManager.createQuery("SELECT o FROM TradeOrder o LEFT JOIN FETCH o.vendor ORDER BY o.createdAt DESC", TradeOrder.class).getResultList();
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR"})
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public TradeOrder create(TradeOrder order, Long vendorId) throws SupplyChainApplicationException {
         validate(order);
@@ -53,7 +50,6 @@ public class OrderService {
         return order;
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR"})
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public TradeOrder updateStatus(Long id, String status) throws OrderProcessingException {
         TradeOrder order = entityManager.find(TradeOrder.class, id);

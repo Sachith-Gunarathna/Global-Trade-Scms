@@ -3,8 +3,10 @@ package com.nexcentauri.scms.rest;
 import com.nexcentauri.scms.entity.TradeOrder;
 import com.nexcentauri.scms.exception.SupplyChainApplicationException;
 import com.nexcentauri.scms.rest.dto.OrderRequest;
+import com.nexcentauri.scms.security.AccessGuard;
 import com.nexcentauri.scms.service.OrderService;
 import jakarta.ejb.EJB;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -24,13 +26,18 @@ public class OrderController {
     @EJB
     private OrderService orderService;
 
+    @Inject
+    private AccessGuard accessGuard;
+
     @GET
     public List<java.util.Map<String, Object>> all() {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "VENDOR_REP");
         return orderService.getAll().stream().map(ApiMapper::order).toList();
     }
 
     @POST
     public Response create(OrderRequest request) throws SupplyChainApplicationException {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR");
         if (request == null) throw new SupplyChainApplicationException("Order details are required.");
         TradeOrder order = new TradeOrder();
         order.setOrderNumber(request.getOrderNumber());
@@ -47,6 +54,7 @@ public class OrderController {
     @PUT
     @Path("/{id}/status")
     public Response status(@PathParam("id") Long id, @QueryParam("value") String value) throws SupplyChainApplicationException {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR");
         return Response.ok(ApiMapper.order(orderService.updateStatus(id, value))).build();
     }
 }

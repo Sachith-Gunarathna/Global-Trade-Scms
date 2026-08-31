@@ -3,7 +3,6 @@ package com.nexcentauri.scms.service;
 import com.nexcentauri.scms.entity.AuditLog;
 import com.nexcentauri.scms.entity.SupplyAlert;
 import jakarta.annotation.security.DeclareRoles;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.ejb.Stateless;
 import jakarta.ejb.TransactionAttribute;
 import jakarta.ejb.TransactionAttributeType;
@@ -21,7 +20,6 @@ public class DashboardService {
     @PersistenceContext(unitName = "GlobalTradePU")
     private EntityManager entityManager;
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP"})
     public Map<String, Object> getDashboardData() {
         Map<String, Object> dashboard = new LinkedHashMap<>();
         dashboard.put("kpis", kpis());

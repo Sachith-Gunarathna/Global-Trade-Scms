@@ -7,7 +7,6 @@ import com.nexcentauri.scms.interceptor.binding.AuditTrail;
 import com.nexcentauri.scms.interceptor.binding.Monitored;
 import jakarta.annotation.Resource;
 import jakarta.annotation.security.DeclareRoles;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.ejb.Stateless;
 import jakarta.ejb.TransactionManagement;
 import jakarta.ejb.TransactionManagementType;
@@ -27,7 +26,6 @@ public class CustomsTransactionService {
     @Resource
     private UserTransaction userTransaction;
 
-    @RolesAllowed({"ADMIN", "CUSTOMS_AGENT"})
     public CustomsDocument releaseShipment(Long documentId) throws CustomsComplianceException {
         try {
             userTransaction.begin();

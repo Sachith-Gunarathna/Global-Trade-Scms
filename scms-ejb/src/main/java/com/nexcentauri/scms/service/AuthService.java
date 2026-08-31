@@ -114,12 +114,7 @@ public class AuthService {
     }
 
     public String mapRequestedRole(String role) {
-        if (role == null) return "LOGISTICS_COORDINATOR";
-        String value = role.toUpperCase(Locale.ROOT);
-        if (value.contains("CUSTOMS")) return "CUSTOMS_AGENT";
-        if (value.contains("WAREHOUSE") || value.contains("INVENTORY")) return "WAREHOUSE_MANAGER";
-        if (value.contains("VENDOR") || value.contains("SUPPLIER")) return "VENDOR_REP";
-        return "LOGISTICS_COORDINATOR";
+        return "VENDOR_REP";
     }
 
     private void validateRegistration(String firstName, String lastName, String email, String password) throws SupplyChainApplicationException {

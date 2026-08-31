@@ -3,8 +3,10 @@ package com.nexcentauri.scms.rest;
 import com.nexcentauri.scms.entity.Inventory;
 import com.nexcentauri.scms.exception.SupplyChainApplicationException;
 import com.nexcentauri.scms.rest.dto.InventoryRequest;
+import com.nexcentauri.scms.security.AccessGuard;
 import com.nexcentauri.scms.service.InventoryService;
 import jakarta.ejb.EJB;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -26,13 +28,18 @@ public class InventoryController {
     @EJB
     private InventoryService inventoryService;
 
+    @Inject
+    private AccessGuard accessGuard;
+
     @GET
     public List<java.util.Map<String, Object>> all() {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "VENDOR_REP");
         return inventoryService.getAll().stream().map(ApiMapper::inventory).toList();
     }
 
     @POST
     public Response create(InventoryRequest request) throws SupplyChainApplicationException {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER");
         if (request == null) throw new SupplyChainApplicationException("Inventory details are required.");
         Inventory item = new Inventory();
         item.setSku(request.getSku());
@@ -51,6 +58,7 @@ public class InventoryController {
     @PUT
     @Path("/{id}/quantity")
     public Response quantity(@PathParam("id") Long id, @QueryParam("value") Integer value) throws SupplyChainApplicationException {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER");
         if (value == null) throw new SupplyChainApplicationException("A quantity is required.");
         return Response.ok(ApiMapper.inventory(inventoryService.updateQuantity(id, value))).build();
     }
@@ -58,6 +66,7 @@ public class InventoryController {
     @DELETE
     @Path("/{id}")
     public Response delete(@PathParam("id") Long id) throws SupplyChainApplicationException {
+        accessGuard.requireAnyRole("ADMIN", "WAREHOUSE_MANAGER");
         inventoryService.delete(id);
         return Response.noContent().build();
     }

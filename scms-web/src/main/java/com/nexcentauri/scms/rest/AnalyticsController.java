@@ -1,7 +1,7 @@
 package com.nexcentauri.scms.rest;
 
 import com.nexcentauri.scms.security.AccessGuard;
-import com.nexcentauri.scms.service.DashboardService;
+import com.nexcentauri.scms.service.AnalyticsService;
 import jakarta.ejb.EJB;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
@@ -10,18 +10,18 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import java.util.Map;
 
-@Path("/dashboard")
+@Path("/analytics")
 @Produces(MediaType.APPLICATION_JSON)
-public class DashboardController {
+public class AnalyticsController {
     @EJB
-    private DashboardService dashboardService;
+    private AnalyticsService analyticsService;
 
     @Inject
     private AccessGuard accessGuard;
 
     @GET
-    public Map<String, Object> dashboard() {
+    public Map<String, Object> analytics() {
         accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP");
-        return dashboardService.getDashboardData();
+        return analyticsService.snapshot();
     }
 }
