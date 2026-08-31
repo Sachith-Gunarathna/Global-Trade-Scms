@@ -119,7 +119,12 @@ public class AuthService {
     }
 
     public String mapRequestedRole(String role) {
-        return "VENDOR_REP";
+        if (role == null || role.isBlank()) return "VENDOR_REP";
+        String normalized = role.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP" -> normalized;
+            default -> "VENDOR_REP";
+        };
     }
 
     private void validateRegistration(String firstName, String lastName, String email, String password) throws SupplyChainApplicationException {
