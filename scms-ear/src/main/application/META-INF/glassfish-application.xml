@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE glassfish-application PUBLIC "-//GlassFish.org//DTD GlassFish Application Server 3.1 Jakarta EE Application 6.0//EN" "http://glassfish.org/dtds/glassfish-application_6_0-1.dtd">
+<glassfish-application>
+    <property name="default-role-mapping" value="true"/>
+    <security-role-mapping>
+        <role-name>ADMIN</role-name>
+        <group-name>ADMIN</group-name>
+    </security-role-mapping>
+    <security-role-mapping>
+        <role-name>LOGISTICS_COORDINATOR</role-name>
+        <group-name>LOGISTICS_COORDINATOR</group-name>
+    </security-role-mapping>
+    <security-role-mapping>
+        <role-name>WAREHOUSE_MANAGER</role-name>
+        <group-name>WAREHOUSE_MANAGER</group-name>
+    </security-role-mapping>
+    <security-role-mapping>
+        <role-name>CUSTOMS_AGENT</role-name>
+        <group-name>CUSTOMS_AGENT</group-name>
+    </security-role-mapping>
+    <security-role-mapping>
+        <role-name>VENDOR_REP</role-name>
+        <group-name>VENDOR_REP</group-name>
+    </security-role-mapping>
+</glassfish-application>
