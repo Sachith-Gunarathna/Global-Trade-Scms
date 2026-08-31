@@ -8,7 +8,6 @@ import com.nexcentauri.scms.interceptor.binding.AuditTrail;
 import com.nexcentauri.scms.interceptor.binding.ComplianceChecked;
 import com.nexcentauri.scms.interceptor.binding.Monitored;
 import jakarta.annotation.security.DeclareRoles;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.ejb.TransactionAttribute;
@@ -30,7 +29,6 @@ public class ShipmentService {
     @EJB
     private VendorService vendorService;
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP"})
     @TransactionAttribute(TransactionAttributeType.SUPPORTS)
     public List<Shipment> getAll() {
         return entityManager.createQuery("SELECT s FROM Shipment s JOIN FETCH s.vendor ORDER BY s.createdAt DESC", Shipment.class).getResultList();
@@ -41,13 +39,11 @@ public class ShipmentService {
         return entityManager.createQuery("SELECT s FROM Shipment s JOIN FETCH s.vendor ORDER BY s.createdAt DESC", Shipment.class).getResultList();
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP"})
     @TransactionAttribute(TransactionAttributeType.SUPPORTS)
     public Shipment get(Long id) throws ShipmentNotFoundException {
         return require(id);
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR"})
     @ComplianceChecked
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public Shipment create(Shipment shipment, Long vendorId) throws SupplyChainApplicationException {
@@ -64,7 +60,6 @@ public class ShipmentService {
         return shipment;
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "CUSTOMS_AGENT"})
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public Shipment updateStatus(Long id, String newStatus) throws ShipmentNotFoundException, SupplyChainApplicationException {
         String status = normalizeStatus(newStatus);
@@ -78,7 +73,6 @@ public class ShipmentService {
         return shipment;
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR"})
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public void delete(Long id) throws ShipmentNotFoundException {
         Shipment shipment = require(id);

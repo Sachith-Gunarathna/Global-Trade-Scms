@@ -10,14 +10,11 @@ import jakarta.ws.rs.container.PreMatching;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 import java.io.IOException;
-import java.util.Set;
 
 @Provider
 @PreMatching
 @Priority(Priorities.AUTHENTICATION - 100)
 public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilter {
-    private static final Set<String> ALLOWED_ORIGINS = Set.of("http://localhost:3000", "http://127.0.0.1:3000");
-
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
         if ("OPTIONS".equalsIgnoreCase(requestContext.getMethod())) {
@@ -28,7 +25,7 @@ public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilt
     @Override
     public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) throws IOException {
         String origin = requestContext.getHeaderString("Origin");
-        if (origin != null && ALLOWED_ORIGINS.contains(origin)) {
+        if (isAllowedOrigin(origin)) {
             responseContext.getHeaders().putSingle("Access-Control-Allow-Origin", origin);
             responseContext.getHeaders().putSingle("Access-Control-Allow-Credentials", "true");
             responseContext.getHeaders().putSingle("Vary", "Origin");
@@ -36,5 +33,10 @@ public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilt
         responseContext.getHeaders().putSingle("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With");
         responseContext.getHeaders().putSingle("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         responseContext.getHeaders().putSingle("Access-Control-Max-Age", "3600");
+    }
+
+    private boolean isAllowedOrigin(String origin) {
+        if (origin == null) return false;
+        return origin.matches("^http://localhost:30\\d{2}$") || origin.matches("^http://127\\.0\\.0\\.1:30\\d{2}$");
     }
 }

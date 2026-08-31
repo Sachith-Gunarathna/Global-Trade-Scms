@@ -4,7 +4,6 @@ import com.nexcentauri.scms.entity.AuditLog;
 import com.nexcentauri.scms.entity.PerformanceMetric;
 import com.nexcentauri.scms.entity.SupplyAlert;
 import jakarta.annotation.security.DeclareRoles;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.ejb.TransactionAttribute;
@@ -28,7 +27,6 @@ public class MonitoringService {
     @EJB
     private RouteOptimizationService routeOptimizationService;
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT"})
     @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
     public Map<String, Object> snapshot() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -40,19 +38,16 @@ public class MonitoringService {
         return result;
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT"})
     @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
     public Map<Long, Integer> routePriorities() {
         return routeOptimizationService.calculatePriorities();
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR"})
     @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
     public int applyRoutePriorities() {
         return routeOptimizationService.applyPriorities();
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT"})
     @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
     public List<Map<String, Object>> timers() {
         return timerService.timerSnapshots();

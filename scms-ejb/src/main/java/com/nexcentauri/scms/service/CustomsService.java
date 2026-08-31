@@ -7,10 +7,7 @@ import com.nexcentauri.scms.exception.ShipmentNotFoundException;
 import com.nexcentauri.scms.interceptor.binding.AuditTrail;
 import com.nexcentauri.scms.interceptor.binding.ComplianceChecked;
 import com.nexcentauri.scms.interceptor.binding.Monitored;
-import jakarta.annotation.Resource;
 import jakarta.annotation.security.DeclareRoles;
-import jakarta.annotation.security.RolesAllowed;
-import jakarta.ejb.SessionContext;
 import jakarta.ejb.Stateless;
 import jakarta.ejb.TransactionAttribute;
 import jakarta.ejb.TransactionAttributeType;
@@ -28,16 +25,12 @@ import java.util.Locale;
 public class CustomsService {
     @PersistenceContext(unitName = "GlobalTradePU")
     private EntityManager entityManager;
-    @Resource
-    private SessionContext sessionContext;
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "CUSTOMS_AGENT", "VENDOR_REP"})
     @TransactionAttribute(TransactionAttributeType.SUPPORTS)
     public List<CustomsDocument> getAll() {
         return entityManager.createQuery("SELECT c FROM CustomsDocument c JOIN FETCH c.shipment s JOIN FETCH s.vendor ORDER BY c.deadline", CustomsDocument.class).getResultList();
     }
 
-    @RolesAllowed({"ADMIN", "LOGISTICS_COORDINATOR", "CUSTOMS_AGENT"})
     @ComplianceChecked
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public CustomsDocument create(CustomsDocument document, Long shipmentId) throws CustomsComplianceException, ShipmentNotFoundException {
@@ -55,10 +48,8 @@ public class CustomsService {
         return document;
     }
 
-    @RolesAllowed({"ADMIN", "CUSTOMS_AGENT"})
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public CustomsDocument approve(Long id, String notes) throws CustomsComplianceException {
-        requireCustomsAuthority();
         CustomsDocument document = require(id);
         document.setStatus("APPROVED");
         document.setNotes(notes);
@@ -66,10 +57,8 @@ public class CustomsService {
         return document;
     }
 
-    @RolesAllowed({"ADMIN", "CUSTOMS_AGENT"})
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public CustomsDocument reject(Long id, String notes) throws CustomsComplianceException {
-        requireCustomsAuthority();
         if (notes == null || notes.isBlank()) throw new CustomsComplianceException("A rejection reason is required.");
         CustomsDocument document = require(id);
         document.setStatus("REJECTED");
@@ -100,12 +89,6 @@ public class CustomsService {
             return entityManager.createQuery("SELECT c FROM CustomsDocument c WHERE c.documentNumber = :number", CustomsDocument.class).setParameter("number", number).getSingleResult();
         } catch (NoResultException exception) {
             return null;
-        }
-    }
-
-    private void requireCustomsAuthority() throws CustomsComplianceException {
-        if (!sessionContext.isCallerInRole("CUSTOMS_AGENT") && !sessionContext.isCallerInRole("ADMIN")) {
-            throw new CustomsComplianceException("Programmatic authorization denied this customs action.");
         }
     }
 

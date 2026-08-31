@@ -3,8 +3,10 @@ package com.nexcentauri.scms.rest;
 import com.nexcentauri.scms.entity.Shipment;
 import com.nexcentauri.scms.exception.SupplyChainApplicationException;
 import com.nexcentauri.scms.rest.dto.ShipmentRequest;
+import com.nexcentauri.scms.security.AccessGuard;
 import com.nexcentauri.scms.service.ShipmentService;
 import jakarta.ejb.EJB;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -25,19 +27,25 @@ public class ShipmentController {
     @EJB
     private ShipmentService shipmentService;
 
+    @Inject
+    private AccessGuard accessGuard;
+
     @GET
     public List<java.util.Map<String, Object>> all() {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP");
         return shipmentService.getAll().stream().map(ApiMapper::shipment).toList();
     }
 
     @GET
     @Path("/{id}")
     public java.util.Map<String, Object> one(@PathParam("id") Long id) throws SupplyChainApplicationException {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP");
         return ApiMapper.shipment(shipmentService.get(id));
     }
 
     @POST
     public Response create(ShipmentRequest request) throws SupplyChainApplicationException {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR");
         if (request == null) throw new SupplyChainApplicationException("Shipment details are required.");
         Shipment shipment = new Shipment();
         shipment.setTrackingNumber(request.getTrackingNumber());
@@ -56,12 +64,14 @@ public class ShipmentController {
     @PUT
     @Path("/{id}/status")
     public Response status(@PathParam("id") Long id, @QueryParam("value") String value) throws SupplyChainApplicationException {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "CUSTOMS_AGENT");
         return Response.ok(ApiMapper.shipment(shipmentService.updateStatus(id, value))).build();
     }
 
     @DELETE
     @Path("/{id}")
     public Response delete(@PathParam("id") Long id) throws SupplyChainApplicationException {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR");
         shipmentService.delete(id);
         return Response.noContent().build();
     }
