@@ -37,6 +37,13 @@ public class InventoryService {
         return entityManager.createQuery("SELECT i FROM Inventory i LEFT JOIN FETCH i.vendor ORDER BY i.itemName", Inventory.class).getResultList();
     }
 
+    @TransactionAttribute(TransactionAttributeType.SUPPORTS)
+    public List<Inventory> getAllForVendor(Long vendorId) {
+        return entityManager.createQuery("SELECT i FROM Inventory i JOIN FETCH i.vendor WHERE i.vendor.id = :vendorId ORDER BY i.itemName", Inventory.class)
+                .setParameter("vendorId", vendorId)
+                .getResultList();
+    }
+
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public Inventory create(Inventory item, Long vendorId) throws SupplyChainApplicationException {
         validate(item);

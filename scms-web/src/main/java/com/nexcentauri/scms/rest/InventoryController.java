@@ -1,6 +1,8 @@
 package com.nexcentauri.scms.rest;
 
 import com.nexcentauri.scms.entity.Inventory;
+import com.nexcentauri.scms.entity.SystemUser;
+import com.nexcentauri.scms.entity.Vendor;
 import com.nexcentauri.scms.exception.SupplyChainApplicationException;
 import com.nexcentauri.scms.rest.dto.InventoryRequest;
 import com.nexcentauri.scms.security.AccessGuard;
@@ -20,6 +22,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Path("/inventory")
 @Produces(MediaType.APPLICATION_JSON)
@@ -32,8 +35,12 @@ public class InventoryController {
     private AccessGuard accessGuard;
 
     @GET
-    public List<java.util.Map<String, Object>> all() {
-        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "VENDOR_REP");
+    public List<Map<String, Object>> all() {
+        SystemUser user = accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "VENDOR_REP");
+        if (accessGuard.isVendorRepresentative(user)) {
+            Vendor vendor = accessGuard.requireRepresentativeVendor(user);
+            return inventoryService.getAllForVendor(vendor.getId()).stream().map(ApiMapper::inventory).toList();
+        }
         return inventoryService.getAll().stream().map(ApiMapper::inventory).toList();
     }
 

@@ -1,0 +1,69 @@
+GlobalTrade SCMS - Payara 6 Deployment
+
+Requirements
+Java 17
+Payara Server 6
+PostgreSQL
+Maven 3.9+
+Node.js 20+
+
+1. Database
+Create a PostgreSQL database for the project and execute database/schema.sql once.
+The application uses jdbc/GlobalTradeDS and does not recreate the schema during deployment.
+
+2. Payara JDBC resource
+Set PAYARA_HOME and POSTGRES_DRIVER_JAR, then run deploy/setup-payara.bat on Windows or deploy/setup-payara.sh on Linux/macOS.
+The script creates GlobalTradePool and jdbc/GlobalTradeDS.
+
+3. Build backend
+From Global-Trade-Scms run:
+mvn clean package
+
+The deployable EAR is:
+scms-ear/target/scms-ear-1.0.ear
+
+4. Deploy backend
+Deploy the EAR through Payara Admin Console or use deploy/deploy-ear.bat or deploy/deploy-ear.sh.
+The REST base URL is:
+http://localhost:8080/Global-Trade-Scms/v1
+
+5. Frontend
+From the scms web directory run:
+npm ci
+npm run build
+npm run start
+
+For development use:
+npm run dev
+
+6. Authentication
+Default mode is Jakarta Security with the SCMS database identity store.
+Optional custom JAAS mode is available by setting SCMS_AUTH_MODE=JAAS before starting Payara.
+Payara application role mappings are defined in scms-ear/src/main/application/META-INF/glassfish-application.xml.
+
+Bootstrap accounts
+admin@globaltrade.lk
+logistics@globaltrade.lk
+warehouse@globaltrade.lk
+customs@globaltrade.lk
+vendor@globaltrade.lk
+
+Bootstrap password
+SCMS_BOOTSTRAP_PASSWORD environment variable.
+If it is not set, the development prototype uses Scms@1234.
+
+7. Vendor privacy
+The vendor representative account is scoped to the supplier identified by its organization/company value. The supplied vendor account maps to Lanka Industrial Fabrications PLC and receives only that supplier's shipments, orders, inventory, customs records, analytics and dashboard values.
+
+8. Carrier and disruption recovery
+Carrier synchronization is available from Monitoring and retries failed carrier polling three times. Set SCMS_CARRIER_OUTAGE=true to simulate a carrier outage. Weather disruption recovery endpoints are available under /v1/monitoring/disruptions/weather/{shipmentId}.
+
+9. Tests
+Run unit tests with:
+mvn test
+
+Run the Payara Arquillian integration test while Payara is running with:
+mvn verify -Parquillian-payara
+
+10. Production hardening
+Use HTTPS, set secure session cookies, replace development credentials with environment-managed secrets, restrict allowed CORS origins, use a managed PostgreSQL service with backups, and operate Payara in a clustered configuration for high availability.

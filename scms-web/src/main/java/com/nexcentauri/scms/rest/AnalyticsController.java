@@ -1,5 +1,7 @@
 package com.nexcentauri.scms.rest;
 
+import com.nexcentauri.scms.entity.SystemUser;
+import com.nexcentauri.scms.entity.Vendor;
 import com.nexcentauri.scms.security.AccessGuard;
 import com.nexcentauri.scms.service.AnalyticsService;
 import jakarta.ejb.EJB;
@@ -21,7 +23,11 @@ public class AnalyticsController {
 
     @GET
     public Map<String, Object> analytics() {
-        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP");
+        SystemUser user = accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT", "VENDOR_REP");
+        if (accessGuard.isVendorRepresentative(user)) {
+            Vendor vendor = accessGuard.requireRepresentativeVendor(user);
+            return analyticsService.snapshotForVendor(vendor.getId());
+        }
         return analyticsService.snapshot();
     }
 }

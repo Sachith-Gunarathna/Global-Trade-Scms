@@ -31,6 +31,13 @@ public class CustomsService {
         return entityManager.createQuery("SELECT c FROM CustomsDocument c JOIN FETCH c.shipment s JOIN FETCH s.vendor ORDER BY c.deadline", CustomsDocument.class).getResultList();
     }
 
+    @TransactionAttribute(TransactionAttributeType.SUPPORTS)
+    public List<CustomsDocument> getAllForVendor(Long vendorId) {
+        return entityManager.createQuery("SELECT c FROM CustomsDocument c JOIN FETCH c.shipment s JOIN FETCH s.vendor WHERE s.vendor.id = :vendorId ORDER BY c.deadline", CustomsDocument.class)
+                .setParameter("vendorId", vendorId)
+                .getResultList();
+    }
+
     @ComplianceChecked
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public CustomsDocument create(CustomsDocument document, Long shipmentId) throws CustomsComplianceException, ShipmentNotFoundException {
