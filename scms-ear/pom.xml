@@ -1,17 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.nexcentauri</groupId>
         <artifactId>Global-Trade-Scms</artifactId>
         <version>1.0</version>
     </parent>
-
     <artifactId>scms-ear</artifactId>
     <packaging>ear</packaging>
-
     <dependencies>
         <dependency>
             <groupId>com.nexcentauri</groupId>
@@ -19,7 +15,6 @@
             <version>${project.version}</version>
             <type>ejb</type>
         </dependency>
-
         <dependency>
             <groupId>com.nexcentauri</groupId>
             <artifactId>scms-web</artifactId>
@@ -27,7 +22,6 @@
             <type>war</type>
         </dependency>
     </dependencies>
-
     <build>
         <plugins>
             <plugin>
@@ -35,16 +29,19 @@
                 <artifactId>maven-ear-plugin</artifactId>
                 <version>3.3.0</version>
                 <configuration>
-                    <version>8</version>
+                    <version>10</version>
                     <defaultLibBundleDir>lib</defaultLibBundleDir>
+                    <generateApplicationXml>false</generateApplicationXml>
                     <modules>
                         <ejbModule>
                             <groupId>com.nexcentauri</groupId>
                             <artifactId>scms-ejb</artifactId>
+                            <bundleFileName>scms-ejb-1.0.jar</bundleFileName>
                         </ejbModule>
                         <webModule>
                             <groupId>com.nexcentauri</groupId>
                             <artifactId>scms-web</artifactId>
+                            <bundleFileName>scms-web-1.0.war</bundleFileName>
                             <contextRoot>/Global-Trade-Scms</contextRoot>
                         </webModule>
                     </modules>
@@ -52,5 +49,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

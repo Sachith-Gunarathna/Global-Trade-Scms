@@ -3,216 +3,142 @@ package com.nexcentauri.scms.service;
 import com.nexcentauri.scms.entity.CustomsDocument;
 import com.nexcentauri.scms.entity.Inventory;
 import com.nexcentauri.scms.entity.Shipment;
-import com.nexcentauri.scms.entity.Vendor;
+import jakarta.annotation.PostConstruct;
+import jakarta.ejb.EJB;
 import jakarta.ejb.Schedule;
 import jakarta.ejb.Singleton;
 import jakarta.ejb.Startup;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-
-import java.time.Duration;
+import jakarta.ejb.Timeout;
+import jakarta.ejb.Timer;
+import jakarta.ejb.TimerConfig;
+import jakarta.ejb.TimerService;
+import jakarta.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.logging.Logger;
+import java.util.Map;
 
 @Singleton
 @Startup
 public class LogisticsTimerService {
+    private static final String CUSTOMS_TIMER = "CUSTOMS_DEADLINE_TIMER";
+    @Resource
+    private TimerService timerService;
+    @EJB
+    private ShipmentService shipmentService;
+    @EJB
+    private InventoryService inventoryService;
+    @EJB
+    private VendorService vendorService;
+    @EJB
+    private CustomsService customsService;
+    @EJB
+    private RouteOptimizationService routeOptimizationService;
+    @EJB
+    private AlertService alertService;
+    @EJB
+    private PerformanceService performanceService;
 
-    private static final Logger LOGGER = Logger.getLogger(LogisticsTimerService.class.getName());
-
-    @PersistenceContext(unitName = "GlobalTradePU")
-    private EntityManager entityManager;
-
-    @Schedule(hour = "*", minute = "*", second = "0", persistent = false)
-    public void performanceDailySupplyChainChecks(){
-        LOGGER.info("--- Executing daily supply chain checks...  ---");
-
-        checkDelayedShipments();
-        checkInventoryLevels();
-        checkCustomsDeadlines();
-    }
-
-    @Schedule(hour = "*", minute = "*", second = "30", persistent = false)
-    public void monitorRealTimeShipmentStatus(){
-        LOGGER.info("--- Executing daily supply chain checks...  ---");
-        LOGGER.info("Real time tracking pinged successfully at: " + System.currentTimeMillis() + ".");
-    }
-
-    private void checkDelayedShipments(){
-        LOGGER.info("Checking for delayed shipments past their expected delivery date...");
-
-        LocalDateTime now = LocalDateTime.now();
-
-        List<Shipment> delayedShipments = entityManager.createQuery(
-                "SELECT s FROM Shipment s" +
-                        " WHERE s.status NOT IN ('DELIVERD', 'DELAYED') " +
-                        "AND s.estimatedDeliveryDate IS NOT NULL " +
-                        "AND s.estimatedDeliveryDate < :now", Shipment.class)
-                .setParameter("now",now)
-                .getResultList();
-
-        for(Shipment shipment : delayedShipments){
-            LOGGER.warning("Shipment " + shipment.getTrachingNumber() + " is DELAYED. Updating status.");
-            shipment.setStatus("DELAYED");
-            entityManager.merge(shipment);
+    @PostConstruct
+    public void initializeProgrammaticTimer() {
+        boolean exists = timerService.getTimers().stream().anyMatch(timer -> CUSTOMS_TIMER.equals(String.valueOf(timer.getInfo())));
+        if (!exists) {
+            Date firstRun = new Date(System.currentTimeMillis() + 60_000L);
+            timerService.createIntervalTimer(firstRun, 30L * 60L * 1000L, new TimerConfig(CUSTOMS_TIMER, true));
         }
     }
 
-    private void checkInventoryLevels(){
-        LOGGER.info("Monitoring inventory replenishment needs for items below reorder level...");
-
-        List<Inventory> lowInventory = entityManager.createQuery(
-                "SELECT i FROM Inventory i WHERE i.quantity <= i.reorderLevel", Inventory.class)
-                .getResultList();
-
-        for(Inventory item : lowInventory){
-            LOGGER.warning("ALERT: Item '"+ item.getItemName() + "' " +
-                    "is low on stock (Quantity: "+item.getQuantity()+"). Recorder required.");
-        }
-    }
-
-    private void checkCustomsDeadlines(){
-        LOGGER.info("Tracking customs documentation deadlines...");
-        LocalDateTime warningTime  = LocalDateTime.now().plusDays(1);
-
-        List<CustomsDocument> urgentDocs = entityManager.createQuery(
-                "SELECT c FROM CustomsDocument c " +
-                        "WHERE c.status = 'PENDING' " +
-                        "AND c.deadline IS NOT NULL " +
-                        "AND c.deadline <= :warningTime", CustomsDocument.class)
-                .setParameter("warningTime", warningTime)
-                .getResultList();
-
-        for (CustomsDocument doc : urgentDocs){
-            LOGGER.warning("URGENT: Customs Document " + doc.getDocumentNumber() + " " +
-                    "is approaching its deadline: " + doc.getDeadline());
-        }
-    }
-
-    private void evaluatedVendorPerformance(){
-
-        LOGGER.info("Evaluating vendor performance...");
-
-        List<Vendor> vendors = entityManager.createQuery("SELECT DISTINCT v FROM Vendor v " +
-                "LEFT JOIN FETCH v.shipments", Vendor.class)
-                .getResultList();
-
-        for(Vendor vendor : vendors){
-
-            List<Shipment> shipments = vendor.getShipments();
-
-            if(shipments == null || shipments.isEmpty()){
-
-                LOGGER.info("Vendor " + vendor.getName() + " has no shipments.");
-                continue;
-            }
-
-            double totalScore = 0.0;
-
-            for(Shipment shipment : shipments){
-
-                String status = normalizeStatus(shipment.getStatus());
-
-                switch (status){
-                    case "DELIVERED":
-                        totalScore += 100.0;
-                        break;
-
-                    case "IN_TRANSIT":
-                        totalScore += 80.0;
-                        break;
-                    case "PENDING":
-                        totalScore += 60.0;
-                        break;
-                    case "DELAYED":
-                        totalScore += 40.0;
-                        break;
-                    default:
-                        totalScore += 50.0;
-                        break;
+    @Schedule(hour = "*", minute = "*/5", second = "0", persistent = true)
+    public void monitorShipments() {
+        long started = System.nanoTime();
+        boolean success = false;
+        try {
+            int delayed = shipmentService.markOverdueShipmentsDelayed(LocalDateTime.now());
+            for (Shipment shipment : shipmentService.getAllForAutomation()) {
+                if ("DELAYED".equals(shipment.getStatus())) {
+                    alertService.raise("danger", "SHIPMENT", shipment.getTrackingNumber(), "Shipment " + shipment.getTrackingNumber() + " is delayed", shipment.getOrigin() + " to " + shipment.getDestination() + " requires attention.");
+                } else {
+                    alertService.resolve("SHIPMENT", shipment.getTrackingNumber());
                 }
-
             }
-
-            double performanceScore = totalScore / shipments.size();
-
-            performanceScore = Math.round(performanceScore * 100.0) / 100.0;
-
-            vendor.setPerformanceScore(performanceScore);
-
-            LOGGER.info("Vendor " + vendor.getName() + " has a performance score of: " + performanceScore +"%.");
-
+            success = true;
+        } finally {
+            performanceService.record("TIMER", "monitorShipments", elapsed(started), success);
         }
-
     }
 
-    private void calculateRouteOptimizationPriority(){
-
-        LOGGER.info("Calculating route optimization priority...");
-
-        LocalDateTime now = LocalDateTime.now();
-
-        List<Shipment> activeShipments = entityManager.createQuery(
-                "SELECT s FROM Shipment  s " +
-                        "WHERE UPPER(s.status) IN " +
-                        "('IN TRANSIT', 'IN_TRANSIT','DELAYED')", Shipment.class
-        ).getResultList();
-
-        for(Shipment shipment : activeShipments){
-
-            int priorityScore = 20;
-
-            String status = normalizeStatus(shipment.getStatus());
-
-            if("DELAYED".equals(status)){
-                priorityScore += 50;
-            }
-
-            if(shipment.getEstimatedDeliveryDate() != null){
-
-                long hoursRemaining = Duration.between(
-                        now,
-                        shipment.getEstimatedDeliveryDate()
-                ).toHours();
-
-                if(hoursRemaining <= 0){
-                    priorityScore += 30;
-                }else if(hoursRemaining <= 24){
-                    priorityScore += 20;
-                }else if(hoursRemaining <= 72){
-                    priorityScore += 10;
+    @Schedule(hour = "*", minute = "*/10", second = "15", persistent = true)
+    public void monitorInventory() {
+        long started = System.nanoTime();
+        boolean success = false;
+        try {
+            for (Inventory item : inventoryService.getAllForAutomation()) {
+                if (item.getQuantity() <= item.getReorderLevel()) {
+                    alertService.raise("warning", "INVENTORY", item.getSku(), "Low stock: " + item.getItemName(), item.getQuantity() + " units remain; reorder level is " + item.getReorderLevel() + ".");
+                } else {
+                    alertService.resolve("INVENTORY", item.getSku());
                 }
-
             }
-
-            priorityScore = Math.min(priorityScore, 100);
-
-            LOGGER.info("Route priority for shipment "
-                    + shipment.getTrachingNumber()
-                    + " = "
-                    + priorityScore
-                    + "/100 ("
-                    + shipment.getOrigin()
-                    + " -> "
-                    + shipment.getDestination()
-                    + ")");
-
+            success = true;
+        } finally {
+            performanceService.record("TIMER", "monitorInventory", elapsed(started), success);
         }
-
     }
 
+    @Schedule(hour = "1", minute = "0", second = "0", persistent = true)
+    public void evaluateVendorPerformance() {
+        long started = System.nanoTime();
+        boolean success = false;
+        try {
+            vendorService.recalculatePerformance();
+            success = true;
+        } finally {
+            performanceService.record("TIMER", "evaluateVendorPerformance", elapsed(started), success);
+        }
+    }
 
-    private String normalizeStatus(String status){
+    @Schedule(hour = "*", minute = "*/15", second = "30", persistent = true)
+    public void optimizeRoutes() {
+        long started = System.nanoTime();
+        boolean success = false;
+        try {
+            routeOptimizationService.applyPriorities();
+            success = true;
+        } finally {
+            performanceService.record("TIMER", "optimizeRoutes", elapsed(started), success);
+        }
+    }
 
-            if(status == null){
-                return "";
+    @Timeout
+    public void handleProgrammaticTimer(Timer timer) {
+        if (!CUSTOMS_TIMER.equals(String.valueOf(timer.getInfo()))) return;
+        long started = System.nanoTime();
+        boolean success = false;
+        try {
+            LocalDateTime warningTime = LocalDateTime.now().plusHours(24);
+            List<CustomsDocument> urgent = customsService.dueBefore(warningTime);
+            for (CustomsDocument document : urgent) {
+                alertService.raise("warning", "CUSTOMS", document.getDocumentNumber(), "Customs deadline approaching", "Document " + document.getDocumentNumber() + " is due by " + document.getDeadline() + ".");
             }
-
-            return status
-                    .trim()
-                    .toUpperCase()
-                    .replace(' ', '_');
+            success = true;
+        } finally {
+            performanceService.record("TIMER", "customsDeadlineProgrammaticTimer", elapsed(started), success);
+        }
     }
+
+    public List<Map<String, Object>> timerSnapshots() {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Timer timer : timerService.getTimers()) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("info", String.valueOf(timer.getInfo()));
+            try { item.put("nextTimeout", timer.getNextTimeout() == null ? null : timer.getNextTimeout().toInstant().toString()); } catch (Exception exception) { item.put("nextTimeout", null); }
+            item.put("persistent", timer.isPersistent());
+            result.add(item);
+        }
+        return result;
+    }
+
+    private long elapsed(long started) { return (System.nanoTime() - started) / 1_000_000L; }
 }
-
