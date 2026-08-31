@@ -1,67 +1,68 @@
 package com.nexcentauri.scms.interceptor;
 
+import com.nexcentauri.scms.interceptor.binding.AuditTrail;
 import com.nexcentauri.scms.service.AuditService;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Priority;
 import jakarta.inject.Inject;
+import jakarta.interceptor.AroundConstruct;
 import jakarta.interceptor.AroundInvoke;
 import jakarta.interceptor.Interceptor;
-import jakarta.interceptor.Interceptors;
 import jakarta.interceptor.InvocationContext;
-import java.util.logging.Logger;
 
-
+@AuditTrail
+@Interceptor
+@Priority(Interceptor.Priority.APPLICATION + 10)
 public class LogisticsAuditInterceptor {
-
-    private static final Logger LOGGER = Logger.getLogger(LogisticsAuditInterceptor.class.getName());
-
-    private static final String SYSTEM_USER = "SYSTEM";
-    private static final String ACTION_INVOKED = "INVOKED";
-    private static final String ACTION_COMPLETED = "COMPLETED";
-    private static final String ACTION_FAILED = "FAILED";
-
     @Inject
     private AuditService auditService;
 
-    @AroundInvoke
-    public Object auditAndMonitor(InvocationContext invocationContext) throws Exception{
-
-        long startTime = System.currentTimeMillis();
-        String methodName = invocationContext.getMethod().getName();
-        String targetClass = invocationContext.getTarget().getClass().getSimpleName();
-
-        logInvocation(methodName, targetClass);
-        persistAuditLog(ACTION_INVOKED, methodName);
-
+    @AroundConstruct
+    public void aroundConstruct(InvocationContext context) throws Exception {
+        long started = System.nanoTime();
         try {
-            Object result = invocationContext.proceed();
-
-            long executionTime = System.currentTimeMillis() - startTime;
-            logSuccess(methodName, executionTime);
-            persistAuditLog(ACTION_COMPLETED, methodName);
-
-            return result;
-        }catch (Exception e){
-            logFailure(methodName, e);
-            persistAuditLog(ACTION_FAILED, methodName);
-            throw e;
+            context.proceed();
+            auditService.logAction(context.getConstructor().getDeclaringClass().getSimpleName(), "constructor", "LIFECYCLE", elapsed(started), true, "constructed");
+        } catch (Exception exception) {
+            auditService.logAction(context.getConstructor().getDeclaringClass().getSimpleName(), "constructor", "LIFECYCLE", elapsed(started), false, safeMessage(exception));
+            throw exception;
         }
-
     }
 
-    private void logInvocation(String methodName, String targetClassName){
-        LOGGER.info(() -> "[AUDIT LOG] Operation '" + methodName + "' invoked on " + targetClassName + ".");
+    @PostConstruct
+    public void postConstruct(InvocationContext context) throws Exception {
+        context.proceed();
+        auditService.logAction(context.getTarget().getClass().getSimpleName(), "postConstruct", "LIFECYCLE", 0L, true, "initialized");
     }
 
-    private void logSuccess(String methodName, long executionTimeMillis) {
-        LOGGER.info(() -> "[PERFORMANCE] Operation '" + methodName
-                + "' completed successfully in " + executionTimeMillis + " ms");
+    @AroundInvoke
+    public Object audit(InvocationContext context) throws Exception {
+        long started = System.nanoTime();
+        String component = context.getTarget().getClass().getSimpleName();
+        String method = context.getMethod().getName();
+        try {
+            Object result = context.proceed();
+            auditService.logAction(component, method, "BUSINESS", elapsed(started), true, "completed");
+            return result;
+        } catch (Exception exception) {
+            auditService.logAction(component, method, "BUSINESS", elapsed(started), false, safeMessage(exception));
+            throw exception;
+        }
     }
 
-    private void logFailure(String methodName, Exception exception) {
-        LOGGER.severe(() -> "[AUDIT ERROR] Operation '" + methodName + "' failed: " + exception.getMessage());
+    @PreDestroy
+    public void preDestroy(InvocationContext context) throws Exception {
+        auditService.logAction(context.getTarget().getClass().getSimpleName(), "preDestroy", "LIFECYCLE", 0L, true, "destroying");
+        context.proceed();
     }
 
-    private void persistAuditLog(String action, String methodName) {
-        auditService.logAction(action, methodName, SYSTEM_USER);
+    private long elapsed(long started) {
+        return (System.nanoTime() - started) / 1_000_000L;
     }
 
+    private String safeMessage(Exception exception) {
+        String message = exception.getMessage();
+        return message == null || message.isBlank() ? exception.getClass().getSimpleName() : message;
+    }
 }
