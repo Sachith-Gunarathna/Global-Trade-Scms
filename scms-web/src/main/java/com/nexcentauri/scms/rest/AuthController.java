@@ -1,14 +1,27 @@
 package com.nexcentauri.scms.rest;
 
-import com.nexcentauri.scms.entity.SystemUser;
 import com.nexcentauri.scms.rest.dto.LoginRequest;
 import com.nexcentauri.scms.rest.dto.RegisterRequest;
-import com.nexcentauri.scms.dto.UserProfileDTO;
 import com.nexcentauri.scms.service.AuthService;
+
+import jakarta.ejb.EJB;
 import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
-import jakarta.ws.rs.*;
+import jakarta.security.enterprise.AuthenticationStatus;
+import jakarta.security.enterprise.SecurityContext;
+import jakarta.security.enterprise.authentication.mechanism.http.AuthenticationParameters;
+import jakarta.security.enterprise.credential.UsernamePasswordCredential;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -17,63 +30,140 @@ import jakarta.ws.rs.core.Response;
 @Consumes(MediaType.APPLICATION_JSON)
 public class AuthController {
 
-    @Inject
+    @EJB
     private AuthService authService;
+
+    @Inject
+    private SecurityContext securityContext;
+
 
     @POST
     @Path("/login")
-    public Response login(LoginRequest request){
+    public Response login(
+            LoginRequest loginRequest,
+            @Context HttpServletRequest request,
+            @Context HttpServletResponse servletResponse
+    ) {
 
-        try {
+        if (loginRequest == null) {
 
-            if (request == null) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(Json.createObjectBuilder()
-                                .add("success", false)
-                                .add("error", "Login request is required.")
-                                .build())
-                        .build();
-            }
-
-            SystemUser user = authService.authenticate(
-                    request.getEmail(),
-                    request.getPassword()
-            );
-
-            String fName = user.getFirstName() != null ? user.getFirstName() : "";
-            String lName = user.getLastName() != null ? user.getLastName() : "";
-            String phone = user.getMobileNumber() != null ? user.getMobileNumber() : "";
-            String dept = user.getDepartment() != null ? user.getDepartment() : "";
-            String hub = user.getPrimaryHub() != null ? user.getPrimaryHub() : "";
-
-            String jsonResponse = String.format(
-                    "{\"success\": true, \"email\": \"%s\", \"role\": \"%s\", \"firstName\": \"%s\"," +
-                            " \"lastName\": \"%s\", \"phone\": \"%s\", \"department\": \"%s\", \"hub\": \"%s\"}",
-                    user.getEmail(), user.getRole(), fName, lName, phone, dept, hub
-            );
-
-            return Response.ok(jsonResponse).build();
-
-        } catch (Exception e) {
-
-            JsonObject errorJson = Json.createObjectBuilder()
-                    .add("success", false)
-                    .add("error",
-                            e.getMessage() != null
-                                    ? e.getMessage()
-                                    : "Authentication failed.")
-                    .build();
-
-            return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity(errorJson)
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(
+                            Json.createObjectBuilder()
+                                    .add("success", false)
+                                    .add("error", "Login details are required.")
+                                    .build()
+                    )
                     .build();
         }
 
+        String email = loginRequest.getEmail();
+        String password = loginRequest.getPassword();
+
+        if (email == null || email.trim().isEmpty()
+                || password == null || password.isEmpty()) {
+
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(
+                            Json.createObjectBuilder()
+                                    .add("success", false)
+                                    .add(
+                                            "error",
+                                            "Email and password are required."
+                                    )
+                                    .build()
+                    )
+                    .build();
+        }
+
+        try {
+
+
+            AuthenticationStatus status =
+                    securityContext.authenticate(
+                            request,
+                            servletResponse,
+                            AuthenticationParameters
+                                    .withParams()
+                                    .newAuthentication(true)
+                                    .credential(
+                                            new UsernamePasswordCredential(
+                                                    email.trim(),
+                                                    password
+                                            )
+                                    )
+                    );
+
+            if (status != AuthenticationStatus.SUCCESS) {
+
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity(
+                                Json.createObjectBuilder()
+                                        .add("success", false)
+                                        .add(
+                                                "error",
+                                                "Invalid email or password."
+                                        )
+                                        .build()
+                        )
+                        .build();
+            }
+
+            String authenticatedEmail =
+                    securityContext.getCallerPrincipal() != null
+                            ? securityContext
+                            .getCallerPrincipal()
+                            .getName()
+                            : email.trim();
+
+            String role = getCurrentUserRole();
+
+
+            JsonObject response = Json.createObjectBuilder()
+                    .add("success", true)
+                    .add("email", authenticatedEmail)
+                    .add("role", role)
+                    .build();
+
+            return Response.ok(response).build();
+
+        } catch (Exception e) {
+
+            JsonObject errorResponse =
+                    Json.createObjectBuilder()
+                            .add("success", false)
+                            .add(
+                                    "error",
+                                    "Authentication failed."
+                            )
+                            .build();
+
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity(errorResponse)
+                    .build();
+        }
     }
+
 
     @POST
     @Path("/register")
-    public Response register(RegisterRequest request){
+    public Response register(RegisterRequest request) {
+
+        if (request == null) {
+
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(
+                            Json.createObjectBuilder()
+                                    .add("success", false)
+                                    .add(
+                                            "error",
+                                            "Registration details are required."
+                                    )
+                                    .build()
+                    )
+                    .build();
+        }
+
         try {
 
             authService.registerUser(
@@ -88,40 +178,157 @@ public class AuthController {
                     request.getPassword()
             );
 
-            JsonObject response = Json.createObjectBuilder()
-                    .add("success", true)
-                    .add("message", "Registration successful.")
-                    .build();
+            JsonObject response =
+                    Json.createObjectBuilder()
+                            .add("success", true)
+                            .add(
+                                    "message",
+                                    "Registration successful."
+                            )
+                            .build();
 
             return Response.ok(response).build();
 
         } catch (Exception e) {
 
-            JsonObject error = Json.createObjectBuilder()
-                    .add("success", false)
-                    .add("error",
-                            e.getMessage() != null
-                                    ? e.getMessage()
-                                    : "Registration failed.")
-                    .build();
+            String message =
+                    e.getMessage() != null
+                            ? e.getMessage()
+                            : "Registration failed.";
+
+            JsonObject errorResponse =
+                    Json.createObjectBuilder()
+                            .add("success", false)
+                            .add("error", message)
+                            .build();
 
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(error)
+                    .entity(errorResponse)
                     .build();
         }
     }
 
-    @PUT
-    @Path("/profile")
-    public Response updateProfile(UserProfileDTO request) {
+
+    @GET
+    @Path("/verify")
+    public Response verifySession() {
+
         try {
-            authService.updateUserProfile(request);
-            return Response.ok("{\"success\": true, \"message\": \"Profile Updated\"}").build();
+
+            if (securityContext.getCallerPrincipal() == null) {
+
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity(
+                                Json.createObjectBuilder()
+                                        .add("success", false)
+                                        .add(
+                                                "error",
+                                                "No active authenticated session."
+                                        )
+                                        .build()
+                        )
+                        .build();
+            }
+
+            String email =
+                    securityContext
+                            .getCallerPrincipal()
+                            .getName();
+
+            String role = getCurrentUserRole();
+
+            JsonObject response =
+                    Json.createObjectBuilder()
+                            .add("success", true)
+                            .add("email", email)
+                            .add("role", role)
+                            .build();
+
+            return Response.ok(response).build();
+
         } catch (Exception e) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("{\"success\": false, \"error\": \"" + e.getMessage() + "\"}")
+
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity(
+                            Json.createObjectBuilder()
+                                    .add("success", false)
+                                    .add(
+                                            "error",
+                                            "Session verification failed."
+                                    )
+                                    .build()
+                    )
                     .build();
         }
     }
 
+    @POST
+    @Path("/logout")
+    public Response logout(
+            @Context HttpServletRequest request
+    ) {
+
+        try {
+
+            HttpSession session =
+                    request.getSession(false);
+
+            request.logout();
+
+
+            if (session != null) {
+                session.invalidate();
+            }
+
+            JsonObject response =
+                    Json.createObjectBuilder()
+                            .add("success", true)
+                            .add(
+                                    "message",
+                                    "Logged out successfully."
+                            )
+                            .build();
+
+            return Response.ok(response).build();
+
+        } catch (ServletException e) {
+
+            JsonObject errorResponse =
+                    Json.createObjectBuilder()
+                            .add("success", false)
+                            .add(
+                                    "error",
+                                    "Logout failed."
+                            )
+                            .build();
+
+            return Response.serverError()
+                    .entity(errorResponse)
+                    .build();
+        }
+    }
+
+
+    private String getCurrentUserRole() {
+
+        if (securityContext.isCallerInRole(
+                "LOGISTICS_PERSONNEL"
+        )) {
+            return "LOGISTICS_PERSONNEL";
+        }
+
+        if (securityContext.isCallerInRole(
+                "CUSTOMS_OFFICIAL"
+        )) {
+            return "CUSTOMS_OFFICIAL";
+        }
+
+        if (securityContext.isCallerInRole(
+                "VENDOR"
+        )) {
+            return "VENDOR";
+        }
+
+        return "UNKNOWN";
+    }
 }
