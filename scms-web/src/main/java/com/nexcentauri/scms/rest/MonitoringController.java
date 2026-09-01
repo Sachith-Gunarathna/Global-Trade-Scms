@@ -59,16 +59,6 @@ public class MonitoringController {
     }
 
     @GET
-    @Path("/timers/recent")
-    public Object recentTimerExecutions() {
-
-        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT"
-        );
-
-        return monitoringService.recentTimerExecutions();
-    }
-
-    @GET
     @Path("/integrations")
     public Map<String, Object> integrations() {
         accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT");
