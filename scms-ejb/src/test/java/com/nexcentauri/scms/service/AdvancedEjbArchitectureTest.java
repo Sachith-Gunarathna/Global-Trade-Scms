@@ -68,6 +68,16 @@ class AdvancedEjbArchitectureTest {
     }
 
     @Test
+    void registrationPreservesSupportedRoleSelection() {
+        AuthService authService = new AuthService();
+        assertEquals("ADMIN", authService.mapRequestedRole("admin"));
+        assertEquals("LOGISTICS_COORDINATOR", authService.mapRequestedRole("LOGISTICS_COORDINATOR"));
+        assertEquals("WAREHOUSE_MANAGER", authService.mapRequestedRole("WAREHOUSE_MANAGER"));
+        assertEquals("CUSTOMS_AGENT", authService.mapRequestedRole("CUSTOMS_AGENT"));
+        assertEquals("VENDOR_REP", authService.mapRequestedRole("VENDOR_REP"));
+    }
+
+    @Test
     void carrierRecoveryUsesLocalGatewayAbstraction() {
         assertTrue(CarrierGateway.class.isAssignableFrom(CarrierIntegrationService.class));
         assertNotNull(CarrierGateway.class.getAnnotation(Local.class));
@@ -87,6 +97,7 @@ class AdvancedEjbArchitectureTest {
         Schedule schedule = method.getAnnotation(Schedule.class);
         assertNotNull(schedule);
         assertTrue(schedule.persistent());
+        assertTrue(schedule.info() != null && !schedule.info().isBlank());
     }
 
     private void assertInterceptor(Class<?> type) {

@@ -58,12 +58,20 @@ The vendor representative account is scoped to the supplier identified by its or
 8. Carrier and disruption recovery
 Carrier synchronization is available from Monitoring and retries failed carrier polling three times. Set SCMS_CARRIER_OUTAGE=true to simulate a carrier outage. Weather disruption recovery endpoints are available under /v1/monitoring/disruptions/weather/{shipmentId}.
 
-9. Tests
+9. Operational monitoring
+EJB timer and interceptor execution records are retained only in bounded application memory and are also written to the Payara server log. They are not persisted to the transactional database. Business and security audit events remain persisted in audit_logs.
+
+Monitoring endpoints:
+/v1/monitoring/timers/recent
+/v1/monitoring/interceptors/recent
+/v1/monitoring/metrics/recent
+
+10. Tests
 Run unit tests with:
 mvn test
 
 Run the Payara Arquillian integration test while Payara is running with:
 mvn verify -Parquillian-payara
 
-10. Production hardening
+11. Production hardening
 Use HTTPS, set secure session cookies, replace development credentials with environment-managed secrets, restrict allowed CORS origins, use a managed PostgreSQL service with backups, and operate Payara in a clustered configuration for high availability.

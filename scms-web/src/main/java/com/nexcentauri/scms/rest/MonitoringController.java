@@ -20,6 +20,7 @@ import java.util.Map;
 @Path("/monitoring")
 @Produces(MediaType.APPLICATION_JSON)
 public class MonitoringController {
+
     @EJB
     private MonitoringService monitoringService;
 
@@ -59,6 +60,27 @@ public class MonitoringController {
     }
 
     @GET
+    @Path("/timers/recent")
+    public Object recentTimerExecutions() {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT");
+        return monitoringService.recentTimerExecutions();
+    }
+
+    @GET
+    @Path("/interceptors/recent")
+    public Object recentInterceptorExecutions() {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT");
+        return monitoringService.recentInterceptorExecutions();
+    }
+
+    @GET
+    @Path("/metrics/recent")
+    public Object recentOperationalMetrics() {
+        accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT");
+        return monitoringService.recentOperationalMetrics();
+    }
+
+    @GET
     @Path("/integrations")
     public Map<String, Object> integrations() {
         accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR", "WAREHOUSE_MANAGER", "CUSTOMS_AGENT");
@@ -74,14 +96,17 @@ public class MonitoringController {
 
     @POST
     @Path("/disruptions/weather/{shipmentId}")
-    public Map<String, Object> reportWeather(@PathParam("shipmentId") Long shipmentId, @QueryParam("severity") String severity) throws SupplyChainApplicationException {
+    public Map<String, Object> reportWeather(@PathParam("shipmentId") Long shipmentId,
+                                             @QueryParam("severity") String severity)
+            throws SupplyChainApplicationException {
         accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR");
         return ApiMapper.shipment(disruptionRecoveryService.reportWeatherDisruption(shipmentId, severity));
     }
 
     @DELETE
     @Path("/disruptions/weather/{shipmentId}")
-    public Map<String, Object> resolveWeather(@PathParam("shipmentId") Long shipmentId) throws SupplyChainApplicationException {
+    public Map<String, Object> resolveWeather(@PathParam("shipmentId") Long shipmentId)
+            throws SupplyChainApplicationException {
         accessGuard.requireAnyRole("ADMIN", "LOGISTICS_COORDINATOR");
         return ApiMapper.shipment(disruptionRecoveryService.resolveWeatherDisruption(shipmentId));
     }
