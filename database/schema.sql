@@ -101,15 +101,6 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     detail VARCHAR(500)
 );
 
-CREATE TABLE IF NOT EXISTS performance_metrics (
-    id BIGSERIAL PRIMARY KEY,
-    metric_type VARCHAR(50) NOT NULL,
-    operation_name VARCHAR(180) NOT NULL,
-    duration_ms BIGINT NOT NULL,
-    success BOOLEAN NOT NULL,
-    recorded_at TIMESTAMP NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS supply_alerts (
     id BIGSERIAL PRIMARY KEY,
     type VARCHAR(30) NOT NULL,
@@ -137,5 +128,4 @@ CREATE INDEX IF NOT EXISTS idx_customs_deadline ON customs_documents(status, dea
 CREATE INDEX IF NOT EXISTS idx_orders_status_date ON trade_orders(status, order_date);
 CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_logs(performed_by);
-CREATE INDEX IF NOT EXISTS idx_performance_recorded ON performance_metrics(recorded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_alert_status ON supply_alerts(status, created_at DESC);
