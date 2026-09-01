@@ -25,8 +25,6 @@ public class MonitoringService {
     @EJB
     private LogisticsTimerService timerService;
     @EJB
-    private TimerExecutionMonitor timerExecutionMonitor;
-    @EJB
     private RouteOptimizationService routeOptimizationService;
     @EJB
     private CarrierGateway carrierGateway;
@@ -39,7 +37,6 @@ public class MonitoringService {
         result.put("audit", audit(auditService.recent(25)));
         result.put("alerts", alerts(alertService.active(20)));
         result.put("timers", timerService.timerSnapshots());
-        result.put("timerExecutions", timerExecutionMonitor.recent());
         result.put("integrations", carrierGateway.health());
         return result;
     }
@@ -68,9 +65,6 @@ public class MonitoringService {
     public Map<String, Object> synchronizeCarriers() {
         return carrierGateway.synchronizeActiveShipments();
     }
-
-    @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
-    public List<Map<String, Object>> recentTimerExecutions() {return timerExecutionMonitor.recent();}
 
     private List<Map<String, Object>> metrics(List<PerformanceMetric> rows) {
         List<Map<String, Object>> result = new ArrayList<>();
